@@ -1,0 +1,198 @@
+# pxPropelEasyEmbeddedRelation plugin #
+
+
+The `pxPropelEasyEmbeddedRelationPlugin` is a symfony plugin that provides a Propel base form class to allow easy and more powerful embedding of forms.
+
+This plugin is a port of ahDoctrineEasyEmbeddedRelations http://www.symfony-project.org/plugins/ahDoctrineEasyEmbeddedRelationsPlugin for Propel 1.5.
+Thanks to original Authors, Daniel Lohse, Krzysztof Kotowicz, Fabrizio Bottino, Gadfly
+
+
+## Installation ##
+
+  * Install the plugin (via a Git clone)
+
+        git clone git://github.com/pixel-cookers/pxPropelEasyEmbeddedRelationPlugin.git
+
+  * Activate the plugin in `config/ProjectConfiguration.class.php`
+
+        [php]
+        class ProjectConfiguration extends sfProjectConfiguration
+        {
+          public function setup()
+          {
+            $this->enablePlugins(array(
+              'sfPropel15Plugin',
+              'pxPropelEasyEmbeddedRelationPlugin',
+              '...'
+            ));
+          }
+        }
+
+  * Change the parent class in `lib/form/BaseFormPropel.class.php` to `pxBaseFormPropel`
+
+        [php]
+        abstract class BaseFormPropel extends pxBaseFormPropel
+        {
+          ...
+        }
+
+  * Publish the plugin assets
+
+        symfony plugin:publish-assets
+
+  * Clear your cache
+
+        symfony cc
+
+## Embedding relations ##
+
+
+To embed one or more relations, add this to one of your form's configure method (or in a plugin form class: to the setup method):
+
+    [php]
+    public function configure()
+    {
+      ...
+      $this->embedRelations(array(
+        'Repository' => array(            //Name of the related object
+          'considerNewFormEmptyFields'    => array('name', 'repo_path', 'repo_username', 'repo_password'),
+          'noNewForm'                     => true,
+          'newFormLabel'                  => 'New repository!!!',
+          'newFormClass'                  => 'RepositoryNewForm',
+          'newFormClassArgs'              => array(array('sf_user' => $this->getOption('sf_user'))),
+          'newFormUnsetPrimaryKeys'=>true, // Sometimes you may not want to hide them, if they are a composite key for example
+          'displayEmptyRelations'         => false,
+          'formClass'                     => 'RepositoryEmbeddedForm',
+          'formClassArgs'                 => array(array('px_add_delete_checkbox' => false, 'another_form_option' => '...')),
+          'newFormAfterExistingRelations' => false,
+          'formFormatter'                 => null,
+          'multipleNewForms'              => true,
+          'newFormsInitialCount'          => 2,
+          'newFormsContainerForm'         => null, // pass BaseForm object here or we will create pxNewRelationsContainerForm
+          'newRelationButtonLabel'        => '+',
+          'newRelationAddByCloning'       => true,
+          'newRelationUseJSFramework'     => 'jQuery', // only jQuery for the moment
+          'customEmbeddedFormLabelMethod' => 'getLabelTitle'
+        ),
+        '...' => array(
+          ...
+        )
+      ));
+    }
+
+Be careful if you're using the new useFields method as this would unset the embedded forms again!
+
+Also, please be aware that the `embedRelations` method does not follow the `embedRelation` method in that you cannot define an alias to use for the relation, you need to specify the classname of the related object, which is, in this case, `Repository`!
+
+Each array defines one embedded relation and you can define a handful of options.
+
+  * The minimal code is this:
+
+        [php]
+        public function configure()
+        {
+          ...
+          $this->embedRelations(array(
+            'Repository' => array(
+              'considerNewFormEmptyFields' => array('name', 'repo_path', 'repo_username', 'repo_password')
+            )
+          ));
+        }
+
+### Options explained ###
+
+Only the first option is required, the rest can either be guessed using the schema and Propel or is an option for which we provide sensible defaults. :)
+
+  * `considerNewFormEmptyFields` (the only required option, array): trouble starts when the user does not want to add a new related object but only wants to edit the main object's properties.
+    As the embedded forms are validated, an error is thrown if one of the embedded form's field's is required.
+    To remedy that you'll have to add all the fields to this array and if all of these are empty, the empty form is dropped and no empty object is saved to the database (or validation errors thrown).
+
+  * `noNewForm` (boolean, not required): if false, no empty form to add a new related object is embedded so you can only manage existing related objects.
+
+  * `newFormLabel` (string, not required): the label that is shown for the new embedded form. If the form is used in the admin generator, label definitions in the generator.yml take precedence over this option:
+
+        [yml]
+        generator:
+          ...
+          param:
+            ...
+
+            config:
+              actions: ~
+              fields:
+                ...
+                new_Repositories:
+                  label:           New repository
+              list:
+                ...
+
+    The key to use in the fields array above is 'new_relationName' ('new_Repositories' in this case, see the example above).
+
+  * `newFormClass` (string, not required): the form class to use for the empty form
+
+  * `newFormClassArgs` (array of arrays, not required): form class options to pass to the empty form class on instantiation.
+    Explanation for why it's an array of arrays: the way embedRelation works uses reflection to construct the right form objects. Now, the first argument is always the model object, the second is the form option array and the third is the local CSRF secret for the form.
+    You don't need to worry about the first one (the model object) because this is always null for the new form. If you want to pass some more options to the related form object (like the user object to avoid using sfContext) just follow the example above.
+
+  * `formClass` (string, not required): the form class to use for the existing related objects.
+
+  * `formClassArgs` (array of arrays, not required): form class options to pass to the existing related objects form class on instantiation.
+    As of version 1.1 it's not necessary to create a separate form class for the existing related forms to display the delete checkbox.
+    This is now handled by the symfony event dispatcher. If you want to change how that works you can always copy over this method and change it to suit your needs:
+
+        [php]
+        public function listenToFormPostConfigureEvent(sfEvent $event)
+        {
+          $form = $event->getSubject();
+
+          if($form instanceof sfFormPropel && $form->getOption('px_add_delete_checkbox', false) && !$form->isNew())
+          {
+            $form->setWidget('delete_object', new sfWidgetFormInputCheckbox(array('label' => 'Just destroy the damn object!')));
+            $form->setValidator('delete_object', new sfValidatorPass());
+          }
+        }
+
+    Or if you want to save space, here's another version you can use:
+
+        [php]
+        public function listenToFormPostConfigureEvent(sfEvent $event)
+        {
+          if ($form = parent::listenToFormPostConfigureEvent($event))
+          {
+            $form->widgetSchema['delete_object']->setOption('label', 'Just destroy the damn object!');
+          }
+        }
+
+    This works because we're calling the plugin's event handler method.
+    This either returns the form so it added the delete checkbox and the validator and you can act on that, or it returns false and you don't act on that. Neat and tidy. :)
+    
+    If you want to disable the checkbox to delete existing related records entirely set this option to this: 'formClassArgs' => array(array('px_add_delete_checkbox' => false)) or add it accordingly to your already existing form class arguments.
+
+  * `displayEmptyRelations` (boolean, not required): set this option to true (false is the default) if you want to check for existing related objects yourself. This can be done in the form template and is useful if you want to let the user know that 'There are no related repositories yet.'. The default is just not displaying anything in this case.
+
+  * `newFormAfterExistingRelations` (boolean, not required): set this option to true to display the empty form to add new related objects below the existing related objects
+
+  * `formFormatter` (string, not required): class name of form formatter for all forms embedding the relation forms
+
+  * `multipleNewForms` (boolean, not required): set this option to true if you want to have multiple new related object forms
+
+  * `newFormsInitialCount` (integer, not required, default: 1): number of new object forms initially displayed (you may insert/delete those forms dynamically using JavaScript, all submitted subforms will be processed and validated.)
+
+  * `newFormsContainerForm` (form object, not required): if not passed, plugin will create custom pxNewRelationsContainerForm form with a single `pxAddRelation` button below the new relation form(s)
+  
+  * `newFormUnsetPrimaryKeys` (boolean, not required) set this option if you do not want to unset the embedded forms primary keys, a situation like this may occur when you embed a form with a composite key
+
+  * `newRelationButtonLabel` (string, not required, default: '+'): label for the `pxAddRelation` new relation button; the setting is used only when the `newFormsContainerForm` option is empty.
+
+  * `newRelationAddByCloning` (boolean, not required, default: true): Should the plugin add new relation forms by cloning them client-side (with JavaScript). If set to false, you should add the behaviour yourself to the `pxAddRelation` form button. The setting is used only when the `newFormsContainerForm` option is empty.
+
+  * `newRelationUseJSFramework` (string, not required, default: 'jQuery'): the JavaScript framework that should handle the client-side logic of the `pxAddRelation` new relation button to dynamically add new forms in the browser - there is only a jQuery version available. Pass 'jQuery' as the value for the option (Mootools could be port from the original plugin).
+  
+  * `customEmbeddedFormLabelMethod` (string, not required): This method is called on each existing related object (not the containing form!) so you can customize the form label that is shown in front of each existing embedded form.
+
+## Questions, bugs, feature requests? ##
+
+You can contact us via e-mail: labrigade@pixel-cookers.com
+
+If you find bugs, have questions and/or feature requests, you can create a ticket on github
+https://github.com/pixel-cookers/pxPropelEasyEmbeddedRelationPlugin/issues

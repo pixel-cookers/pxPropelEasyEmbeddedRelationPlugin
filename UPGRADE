@@ -1,0 +1,7 @@
+# pxPropelEasyEmbeddedRelation plugin: UPGRADE GUIDE #
+
+Here I'll document things that need to be done to get from one version of the plugin to another.
+
+ATTENTION: I'll only describe changes here when there was a BC break either because of a new feature or because of a bug!
+
+## Version 0.1.0 ##
