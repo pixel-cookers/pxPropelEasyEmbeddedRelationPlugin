@@ -3,7 +3,7 @@
 /**
  * Propel form base class that makes it pretty easy to embed one or multiple related forms including creation forms.
  *
- * @package    pxPropelEasyEmbeddedRelationsPlugin
+ * @package    pxPropelEasyEmbeddedRelationPlugin
  * @subpackage form
  * @author     Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
  *

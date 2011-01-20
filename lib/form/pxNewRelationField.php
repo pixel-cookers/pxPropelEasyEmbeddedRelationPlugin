@@ -29,7 +29,7 @@ class pxNewRelationField extends sfWidgetForm
     // allow only 0-9,a-z,A-Z,- and _ for framework name (LFI protection)
     $cleanFrameworkName = preg_replace('#[^0-9a-z._-]#i', '', $this->getOption('useJSFramework'));
 
-    $filename = sprintf('pxPropelEasyEmbeddedRelationsPlugin.%s.js', $cleanFrameworkName);
-    return array('/pxPropelEasyEmbeddedRelationsPlugin/js/' . $filename);
+    $filename = sprintf('pxPropelEasyEmbeddedRelationPlugin.%s.js', $cleanFrameworkName);
+    return array('/pxPropelEasyEmbeddedRelationPlugin/js/' . $filename);
   }
 }

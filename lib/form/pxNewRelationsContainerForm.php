@@ -3,7 +3,7 @@
 /**
  * Class used to embed new object forms in parent form
  *
- * @package    pxPropelEasyEmbeddedRelationsPlugin
+ * @package    pxPropelEasyEmbeddedRelationPlugin
  * @subpackage form
  * @author     Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
  * @author     Krzysztof Kotowicz <kkotowicz at gmail dot com>
