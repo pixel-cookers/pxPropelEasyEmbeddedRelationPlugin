@@ -2,7 +2,9 @@
 
 /**
  * This class displays the button to add new embedded relation forms; it relies on client-side JavaScript to work.
- * @author
+ *
+ * @author     Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
+ * @author     Krzysztof Kotowicz <kkotowicz at gmail dot com>
  */
 class pxNewRelationField extends sfWidgetForm
 {

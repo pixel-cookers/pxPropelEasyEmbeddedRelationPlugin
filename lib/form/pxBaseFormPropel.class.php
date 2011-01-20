@@ -6,6 +6,13 @@
  * @package    pxPropelEasyEmbeddedRelationsPlugin
  * @subpackage form
  * @author     Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
+ *
+ * Authors of the Doctrine version:
+ * @author     Daniel Lohse <info@asaphosting.de>
+ * @author     Krzysztof Kotowicz <kkotowicz at gmail dot com>
+ * @author     Gadfly <gadfly@linux-coders.org>
+ * @author     Fabrizio Bottino <fabryb@fabryb.com>
+ * @author     Matt Daum <matt@setfive.com>
  */
 abstract class pxBaseFormPropel extends sfFormPropel
 {
@@ -48,7 +55,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
     foreach ($relations as $relationName => $relationSettings)
     {
       $relationSettings = $this->addDefaultRelationSettings($relationSettings);
-      //$relation = $this->getObject()->getTable()->getRelation($relationName);
       $relationMap = $this->getRelationMap($relationName);
       if ($relationMap->getType() != RelationMap::ONE_TO_MANY)
       {
@@ -62,7 +68,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
         $containerName = 'new_'.$relationName;
         $formLabel = $relationSettings['newFormLabel'];
 
-     //   if (!$relation->isOneToOne())
         if($relationMap->getType() != RelationMap::ONE_TO_ONE)
         {
           if ($relationSettings['multipleNewForms']) // allow multiple new forms for this relation
@@ -94,7 +99,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
 //        }
       }
 
-      //$formClass = (null === $relationSettings['formClass']) ? $relation->getClass().'Form' : $relationSettings['formClass'];
       $formClass = (null === $relationSettings['formClass']) ? $relationMap->getLocalTable()->getClassname().'Form' : $relationSettings['formClass'];
       $formArgs = (null === $relationSettings['formClassArgs']) ? array() : $relationSettings['formClassArgs'];
       if ((isset($formArgs[0]) && !array_key_exists('px_add_delete_checkbox', $formArgs[0])) || !isset($formArgs[0]))
@@ -102,7 +106,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
         $formArgs[0]['px_add_delete_checkbox'] = true;
       }
 
-      //if ($relation->isOneToOne())
       if($relationMap->getType() == RelationMap::ONE_TO_ONE)
       {
 //        $form = new $formClass($this->getObject()->$relationName, $formArgs[0]);
@@ -158,13 +161,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
        * AND
        * (3. Option `displayEmptyRelations` was either not set by the user or was set by the user and is false)
        */
-//      if (
-//        (
-//          (!$relation->isOneToOne() && count($this->getEmbeddedForm($relationName)->getEmbeddedForms()) === 0) ||
-//          ($relation->isOneToOne() && $this->getEmbeddedForm($relationName)->isNew())
-//        ) &&
-//        !$relationSettings['displayEmptyRelations']
-//      )
       if(( count($this->getEmbeddedForm($relationName)->getEmbeddedForms()) === 0) && !$relationSettings['displayEmptyRelations'])
       {
         unset($this[$relationName]);
@@ -241,7 +237,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
                 if (!isset($form->embeddedForms[$containerName][$index]))
                 {
                   // create and embed new form
-                 // $relation = $this->getObject()->getTable()->getRelation($relationName);
                   $relationMap = $this->getRelationMap($relationName);
                   $addedForm = $this->embeddedFormFactory($relationName, $keys, $relationMap, ((int) $index) + 1);
                   $ef = $form->embeddedForms[$containerName];
@@ -294,7 +289,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
 
       if (isset($values[$relationName]))
       {
-      	//$relation            = $form->getObject()->getTable()->getRelation($relationName);
       	$relationMap         = $form->getRelationMap($relationName);
         $relationForm        = $form->embeddedForms[$relationName];
       	$oneToOneRelationFix = $relationMap->getType() == RelationMap::ONE_TO_ONE ? array($values[$relationName]) : $values[$relationName];
@@ -317,7 +311,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
             $form->scheduledForDeletion[$relationName][$i] = $primaryKeyValues;
 
             // not validate forms that should be marked for deleting
-            //if ($relation->isOneToOne())
             if($relationMap->getType() == RelationMap::ONE_TO_ONE)
             {
               unset($values[$relationName], $form->validatorSchema[$relationName]);
@@ -330,7 +323,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
           else
           {
             // walk recursive over embeded forms
-            //if ($relation->isOneToOne())
             if($relationMap->getType() == RelationMap::ONE_TO_ONE)
             {
               $values[$relationName] = $form->doBindEmbedRelations($relationForm, $values[$relationName]);
@@ -381,13 +373,10 @@ abstract class pxBaseFormPropel extends sfFormPropel
     {
       foreach ($this->getScheduledForDeletion() as $relationName => $ids)
       {
-
-       // $relation = $this->getObject()->getTable()->getRelation($relationName);
         $relationMap = $this->getRelationMap($relationName);
         $collection = call_user_func(array($this->getObject(), sprintf('get%ss', $relationName)));
         foreach ($ids as $index => $id)
         {
-          //if ($relation->isOneToOne())
           if($relationMap->getType() == RelationMap::ONE_TO_ONE)
           {
             unset($values[$relationName]);
@@ -397,12 +386,8 @@ abstract class pxBaseFormPropel extends sfFormPropel
             unset($values[$relationName][$index]);
           }
 
-          //if ($relation->isOneToOne())
           if($relationMap->getType() != RelationMap::ONE_TO_ONE)
           {
-          	//TODO: delete related object
-          	//echo 'index :' . $index . ' id:' . $id;
-          	//$collection->remove($index);
             unset($this->widgetSchema[$relationName][$index]);
 		        unset($this->validatorSchema[$relationName][$index]);
 		        unset($this->defaults[$relationName][$index]);
@@ -411,17 +396,8 @@ abstract class pxBaseFormPropel extends sfFormPropel
 		        unset($this->embeddedForms[$relationName][$index]);
 
           }
-          else
-          {
-            //$this->getObject->clearRelated($relationName);
-          }
           $queryClass = $relationMap->getLocalTable()->getClassname(). 'Query';
           $queryClass::create()->filterByPrimaryKey($id['id'])->delete();
-
-          //call_user_func(array($this->getObject(), sprintf('clear%ss', $relationName)));
-
-
-          //Doctrine::getTable($relation->getClass())->find($id)->delete();
         }
       }
     }
@@ -496,7 +472,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
   	{
   	  $relations = $classPeer->getTableMap()->getRelations();
   	}
-    //foreach ($this->getObject()->getTable()->getRelations() as $relation)
     foreach ($relations as $relation)
     {
     	$class = $relation->getLocalTable()->getClassname();
@@ -524,15 +499,12 @@ abstract class pxBaseFormPropel extends sfFormPropel
 	      $relations = $classPeer->getTableMap()->getRelations();
 	    }
 
-      //foreach ($object->getTable()->getRelations() as $alias => $relation)
       foreach ($relations as $relation)
       {
       	$class = $relation->getLocalTable()->getClassname();
-        //$class = $relation->getClass();
         if ($this->getObject() instanceof $class)
         {
         	return $relation->getName();
-          //return $alias;
         }
       }
     }
@@ -597,19 +569,17 @@ abstract class pxBaseFormPropel extends sfFormPropel
 
       if($relationSettings['newFormUnsetPrimaryKeys'])
       {
-       // $newFormIdentifiers = $newForm->getObject()->getTable()->getIdentifierColumnNames();
         $newFormIdentifiers = $newForm->getObject()->getPeer()->getTableMap()->getPrimaryKeys();
         foreach ($newFormIdentifiers as $primaryKey)
         {
           unset($newForm[strtolower($primaryKey->getName())]);
         }
       }
-      //TODO: changer récupération de la foreignKey
+
 		  foreach($relationMap->getLocalColumns() as $fk)
 			{
 			  unset($newForm[strtolower($fk->getName())]);
 			}
-    //  unset($newForm[$relation->getForeignColumnName()]);
 
       // FIXME/TODO: check if this even works for one-to-one
       // CORRECTION 1: Not really, it creates another record but doesn't link it to this object!
@@ -626,29 +596,23 @@ abstract class pxBaseFormPropel extends sfFormPropel
   }
 
   /**
-   * Returns Doctrine Record object prepared for form given the relation
+   * Returns Propel object prepared for form given the relation
    * @param string $relationName
-   * @param Doctrine_Relation $relation
-   * @return Doctrine_Record
+   * @param RelationMap $relation
+   *
    */
   private function embeddedFormObjectFactory($relationName, RelationMap $relation)
   {
-    //if (!$relation->isOneToOne())
     if($relation->getType() != RelationMap::ONE_TO_ONE)
     {
-      //$newFormObjectClass = $relation->getClass();
       $newFormObjectClass = $relation->getLocalTable()->getClassname();
 
       $newFormObject = new $newFormObjectClass();
 
-      //echo 'set'. get_class($this->getObject());
+      //Limitation: need to set ColumnId to prevent object from being saved by the related object in case of deletion
+      //TODO: replace by PK, FK
       $newFormObject->{'set'. get_class($this->getObject()).'Id'}($this->getObject()->getId());
-     // $newFormObject[$this->getRelationAliasByObject($newFormObject)] = $this->getObject();
     }
-//    else
-//    {
-//      $newFormObject = $this->getObject()->$relationName;
-//    }
 
     return $newFormObject;
   }

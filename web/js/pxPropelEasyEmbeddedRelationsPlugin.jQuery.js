@@ -2,6 +2,7 @@
  * Code needed to clone nested relations forms
  * @plugin pxPropelEasyEmbeddedRelationsPlugin
  * @author Jeremie Augustin <jeremie dot augustin at pixel-cookers dot com>
+ * @author Krzysztof Kotowicz <kkotowicz at gmail dot com>
  */
 (function($) {
 

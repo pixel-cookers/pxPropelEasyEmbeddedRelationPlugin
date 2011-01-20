@@ -5,7 +5,8 @@
  *
  * @package    pxPropelEasyEmbeddedRelationsPlugin
  * @subpackage form
- * @author
+ * @author     Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
+ * @author     Krzysztof Kotowicz <kkotowicz at gmail dot com>
  */
 class pxNewRelationsContainerForm extends BaseForm
 {

@@ -5,8 +5,7 @@
  *
  * @package     pxPropelEasyEmbeddedRelationsPlugin
  * @subpackage  config
- * @author
- * @version     SVN: $Id$
+ * @author      Jérémie Augustin <jeremie dot augustin at pixel-cookers dot com>
  */
 class pxPropelEasyEmbeddedRelationsPluginConfiguration extends sfPluginConfiguration
 {
