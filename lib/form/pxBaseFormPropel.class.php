@@ -38,7 +38,10 @@ abstract class pxBaseFormPropel extends sfFormPropel
         'newRelationButtonLabel' => '+',
         'newRelationAddByCloning' => true,
         'newRelationUseJSFramework' => 'jQuery',
-
+        'isUnique'  => false, // True to handle duplicate form base on a field "uniqueField"
+        'uniqueField' => null, //name of the field that should be unique
+        'fusionOrDeleteUniqueField' => 'fusion', // fusion or delete (duplicated entry)
+        'fusionFields' => array(), // array(array('field_name' => 'my_field', 'fusion_method' => 'myMethodToFusion'), array()) the default method is addition : fusionFieldAddition
     );
 
   protected function addDefaultRelationSettings(array $settings)
@@ -58,7 +61,7 @@ abstract class pxBaseFormPropel extends sfFormPropel
       $relationMap = $this->getRelationMap($relationName);
       if ($relationMap->getType() != RelationMap::ONE_TO_MANY)
       {
-        throw new sfException('embedRelation() only works for one-to-many relationships');
+        throw new sfException('embedRelations() only works for one-to-many relationships');
       }
 
       $collection = call_user_func(array($this->getObject(), sprintf('get%ss', $relationName)));
@@ -405,6 +408,158 @@ abstract class pxBaseFormPropel extends sfFormPropel
     parent::doUpdateObject($values);
   }
 
+/**
+   * Overwride Symfony method to
+   * Updates the values of the object with the cleaned up values.
+   *
+   * @param  array $values An array of values
+   *
+   * @return mixed The current updated object
+   */
+  public function updateObject($values = null)
+  {
+    if (null === $values)
+    {
+      $values = $this->values;
+    }
+
+    $values = $this->processValues($values);
+
+    $this->doUpdateObject($values);
+
+    //Clean unique value for embeddedForms
+    $values = $this->doCleanUnique($values);
+    // embedded forms
+    $this->updateObjectEmbeddedForms($values);
+
+    return $this->getObject();
+  }
+
+  public function doCleanUnique($values)
+  {
+  	echo '<pre>';
+  	print_r($values);
+  	foreach ($this->embedRelations as $relationName => $keys)
+    {
+      $keys = $this->addDefaultRelationSettings($keys);
+
+
+      if($keys['isUnique'])
+      {
+      	$array_unique = array();
+      	$array_unique_new = array();
+
+      	if (isset($values[$relationName]))
+        {
+        	// old values
+        	foreach($values[$relationName] as $index => $form)
+        	{
+        		if(($unique_exist = array_search($values[$relationName][$index][$keys['uniqueField']], $array_unique)) === false)
+        		{
+        			$array_unique[$index] = $values[$relationName][$index][$keys['uniqueField']];
+        		}
+        		else
+        		{
+        			switch($keys['fusionOrDeleteUniqueField'])
+        			{
+        				case 'fusion':
+        					foreach($keys['fusionFields'] as $fusionField)
+        					{
+        						if(!isset($fusionField['fusion_method']))
+        						{
+        							$fusionField['fusion_method'] = 'fusionFieldAddition';
+        						}
+        						if(method_exists($this, $fusionField['fusion_method'])) // isset($values[$relationName][$unique_exist][$keys['field_name']]))
+        						{
+        							$values[$relationName][$unique_exist][$fusionField['field_name']] =
+        							 $this->{$fusionField['fusion_method']}($values[$relationName][$unique_exist][$fusionField['field_name']], $values[$relationName][$index][$fusionField['field_name']]);
+        						}
+        					}
+
+        			  case 'delete':
+			            unset($this->widgetSchema[$relationName][$index]);
+			            unset($this->validatorSchema[$relationName][$index]);
+			            unset($this->defaults[$relationName][$index]);
+			            unset($this->taintedValues[$relationName][$index]);
+			            unset($this->values[$relationName][$index]);
+			            unset($this->embeddedForms[$relationName][$index]);
+			            $relationMap = $this->getRelationMap($relationName);
+				          $queryClass = $relationMap->getLocalTable()->getClassname(). 'Query';
+				          $queryClass::create()->filterByPrimaryKey($form['id'])->delete();
+                  break;
+        			}
+        		}
+        	}
+        }
+
+        $containerName = 'new_'.$relationName;
+
+        if (isset($values[$containerName]))
+        {
+          // new values
+          foreach($values[$containerName] as $index => $form)
+          {
+            if(($unique_exist = array_search($values[$containerName][$index][$keys['uniqueField']], $array_unique)) === false
+              && ($unique_exist = array_search($values[$containerName][$index][$keys['uniqueField']], $array_unique_new)) === false)
+            {
+              $array_unique_new[$index] = $values[$containerName][$index][$keys['uniqueField']];
+            }
+            else
+            {
+
+            	if(($unique_exist = array_search($values[$containerName][$index][$keys['uniqueField']], $array_unique)) !== false)
+            	{
+            		$duplicateNew = false;
+            	}
+            	else if (($unique_exist = array_search($values[$containerName][$index][$keys['uniqueField']], $array_unique_new)) !== false)
+              {
+              	$duplicateNew = true;
+              }
+              switch($keys['fusionOrDeleteUniqueField'])
+              {
+                case 'fusion':
+                  foreach($keys['fusionFields'] as $fusionField)
+                  {
+                    if(!isset($fusionField['fusion_method']))
+                    {
+                      $fusionField['fusion_method'] = 'fusionFieldAddition';
+                    }
+                    if(method_exists($this, $fusionField['fusion_method']) )
+                    {
+                    	if($duplicateNew && isset($values[$containerName][$unique_exist][$keys['field_name']]))
+                    	{
+                        $values[$containerName][$unique_exist][$fusionField['field_name']] =
+                            $this->{$fusionField['fusion_method']}($values[$containerName][$unique_exist][$fusionField['field_name']], $values[$containerName][$index][$fusionField['field_name']]);
+                    	}
+                    	else if(!$duplicateNew && isset($values[$relationName][$unique_exist][$fusionField['field_name']]))
+                      {
+                        $values[$relationName][$unique_exist][$fusionField['field_name']] =
+                            $this->{$fusionField['fusion_method']}($values[$relationName][$unique_exist][$fusionField['field_name']], $values[$containerName][$index][$fusionField['field_name']]);
+                      }
+                    }
+                  }
+
+                case 'delete':
+                  unset($this->widgetSchema[$containerName][$index]);
+                  unset($this->validatorSchema[$containerName][$index]);
+                  unset($this->defaults[$containerName][$index]);
+                  unset($this->taintedValues[$containerName][$index]);
+                  unset($this->values[$containerName][$index]);
+                  unset($this->embeddedForms[$containerName][$index]);
+                  break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+//    print_r($values);
+//    die();
+
+  	return $values;
+  }
+
   public function getScheduledForDeletion()
   {
     return $this->scheduledForDeletion;
@@ -433,8 +588,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
          * so there isn't anything weird happening
          */
         $relationName = $this->getRelationByEmbeddedFormClass($form);
-
-
 
         if ($relationName && isset($this->scheduledForDeletion[$relationName]) && false!==array_search($form->getObject()->getPrimaryKey(),$this->scheduledForDeletion[$relationName]))
         {
@@ -644,5 +797,17 @@ abstract class pxBaseFormPropel extends sfFormPropel
 
     unset($subForm[$subForm->getCSRFFieldName()]);
     return $subForm;
+  }
+
+
+  /**
+   *
+   * Addition $firstValue with $secondValue
+   * @param unknown_type $firstValue
+   * @param unknown_type $secondValue
+   */
+  public function fusionFieldAddition($firstValue, $secondValue)
+  {
+  	return ($firstValue + $secondValue);
   }
 }
