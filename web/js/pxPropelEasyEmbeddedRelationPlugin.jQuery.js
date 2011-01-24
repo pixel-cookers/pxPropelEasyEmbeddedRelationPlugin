@@ -50,7 +50,7 @@
 jQuery(function($) {
 
 	// when clicking the 'add relation' button
-	$('.pxAddRelation').click(function() {
+	$('.pxAddRelation').live('click', function() {
 
 		// find last row of my siblings (each row represents a subform)
 		$row = $(this).closest('tr,li').siblings('tr:last,li:last');
