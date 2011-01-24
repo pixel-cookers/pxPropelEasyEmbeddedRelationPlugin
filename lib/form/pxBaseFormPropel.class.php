@@ -437,8 +437,6 @@ abstract class pxBaseFormPropel extends sfFormPropel
 
   public function doCleanUnique($values)
   {
-  	echo '<pre>';
-  	print_r($values);
   	foreach ($this->embedRelations as $relationName => $keys)
     {
       $keys = $this->addDefaultRelationSettings($keys);
