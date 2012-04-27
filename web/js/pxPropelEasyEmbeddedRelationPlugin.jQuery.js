@@ -37,9 +37,9 @@
 			});
 
 			// increase the number in first <th>
-			$header = $(this).children('th').eq(0);
-			if ($header.text().match(/^\d+$/)) {
-				$header.text(parseInt($header.text(),10) + 1);
+			header = $(this).children('th').eq(0);
+			if (header.text().match(/^\d+$/)) {
+				header.text(parseInt(header.text(),10) + 1);
 			}
 			$(this).end();
 		});
@@ -53,21 +53,32 @@ jQuery(function($) {
 	$('.pxAddRelation').live('click', function() {
 
 		// find last row of my siblings (each row represents a subform)
-		$row = $(this).closest('tr,li').siblings('tr:last,li:last');
+		var row = $('.pxAddContainer:last');
+		if ($(row).hasClass('hide')) {
+			$(row).trigger('beforeadd.px').removeClass('hide').trigger('afteradd.px');
+			return ;
+		}
 
 		// clone it, increment the fields and insert it below, additionally triggering events
-		$row.trigger('beforeclone.px');
-		var $newrow = $row.clone(true);
-		$row.trigger('afterclone.px')
+		row.trigger('beforeclone.px');
+		var newrow = row.clone(true);
+		row.trigger('afterclone.px')
 
-		$newrow
+		newrow
 			.incrementFields($(this).attr('rel'))
 			.trigger('beforeadd.px')
-			.insertAfter($row)
+			.insertAfter(row)
 			.trigger('afteradd.px');
 
 		//use events to further modify the cloned row like this
 		// $(document).bind('beforeadd.px', function(event) { $(event.target).hide() /* event.target is cloned row */ });
 		// $(document).bind('afteradd.px', function(event) { });
-	})
+	});
+	
+	$('button[rel="pxDeleteEmbeddedForm"]').live('click', function(event){
+		if (confirm($(this).attr('data-title'))) {
+			$(this).siblings('input[type=checkbox]').attr('checked', true);
+			$(this).closest('.pxAddContainer').addClass('hide');
+		}
+	});
 });

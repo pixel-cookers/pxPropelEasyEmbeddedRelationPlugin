@@ -19,7 +19,7 @@ class pxNewRelationField extends sfWidgetForm
   public function render($name, $value = null, $attributes = array(), $errors = array())
   {
     return $this->renderContentTag('button', $this->getOption('newRelationButtonLabel'), array(
-      'type' => 'button', 'class' => 'pxAddRelation', 'rel' => $this->getOption('containerName')));
+      'type' => 'button', 'class' => 'pxAddRelation' . (isset($attributes['class'])? ' '. $attributes['class']:''), 'rel' => $this->getOption('containerName')));
   }
 
   public function getJavaScripts()

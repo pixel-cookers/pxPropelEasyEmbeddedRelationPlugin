@@ -449,6 +449,10 @@ abstract class pxBaseFormPropel extends sfFormPropel
         }
         else
         {
+          if ($form->getObject()->isNew()) {
+            //TODO: replace by PK, FK
+            $form->getObject()->{'set' . get_class($this->getObject())}($this->getObject());
+          }
           $form->getObject()->save($con);
         }
       }
